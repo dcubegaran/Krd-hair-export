@@ -1,0 +1,186 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+
+    function isStaffOrAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff']);
+    }
+
+    function isValidUserData() {
+      return request.resource.data.keys().hasAll(['email', 'displayName', 'role', 'isActive']) &&
+        request.resource.data.role in ['admin', 'staff', 'customer'];
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+
+      // Users can update their own profile (limited fields)
+      allow update: if isOwner(userId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'phone', 'address']);
+
+      // Users can create their own profile during signup
+      allow create: if isAuthenticated() &&
+        request.auth.uid == userId &&
+        isValidUserData();
+
+      // Admins can read all users
+      allow read: if isAdmin();
+
+      // Admins can write all users
+      allow write: if isAdmin();
+    }
+
+    // Products collection
+    match /products/{productId} {
+      // Authenticated users can read active products
+      allow read: if isAuthenticated() &&
+        resource.data.get('isActive', true) == true;
+
+      // Only admins can create, update, or delete products
+      allow create, update, delete: if isAdmin();
+
+      // Allow read for all authenticated users (for product catalog)
+      allow read: if isAuthenticated();
+    }
+
+    // Orders collection
+    match /orders/{orderId} {
+      // Users can read their own orders
+      allow read: if isAuthenticated() &&
+        resource.data.customerId == request.auth.uid;
+
+      // Users can create orders
+      allow create: if isAuthenticated() &&
+        request.resource.data.customerId == request.auth.uid;
+
+      // Staff and admins can read all orders
+      allow read: if isStaffOrAdmin();
+
+      // Only admins can update orders
+      allow update: if isAdmin();
+
+      // Prevent users from modifying order amounts or customer info
+      allow update: if isOwner(resource.data.customerId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['notes']);
+    }
+
+    // Categories collection
+    match /categories/{categoryId} {
+      // Anyone can read categories (for product filtering)
+      allow read: if true;
+
+      // Only admins can modify categories
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Inventory collection
+    match /inventory/{inventoryId} {
+      // Staff and admins can read inventory
+      allow read: if isStaffOrAdmin();
+
+      // Only admins can modify inventory
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Inquiries collection
+    match /inquiries/{inquiryId} {
+      // Users can create inquiries
+      allow create: if isAuthenticated();
+
+      // Users can read their own inquiries
+      allow read: if isAuthenticated() &&
+        resource.data.email == request.auth.token.email;
+
+      // Staff and admins can read all inquiries
+      allow read: if isStaffOrAdmin();
+
+      // Staff and admins can update inquiries
+      allow update: if isStaffOrAdmin();
+    }
+
+    // Settings collection (for app configuration)
+    match /settings/{settingId} {
+      // Anyone can read settings
+      allow read: if true;
+
+      // Only admins can modify settings
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Images collection
+    match /images/{imageId} {
+      // Users can read images they uploaded
+      allow read: if isAuthenticated() && resource.data.uploadedBy == request.auth.uid;
+
+      // Users can create image records for their uploads
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.uploadedBy;
+
+      // Staff and admins can read all images
+      allow read: if isStaffOrAdmin();
+
+      // Only admins can modify or delete images
+      allow update, delete: if isAdmin();
+    }
+
+    // Quotes collection
+    match /quotes/{quoteId} {
+      // Users can create quotes
+      allow create: if isAuthenticated();
+
+      // Users can read their own quotes
+      allow read: if isAuthenticated() && resource.data.email == request.auth.token.email;
+
+      // Staff and admins can read all quotes
+      allow read: if isStaffOrAdmin();
+
+      // Staff and admins can update quotes
+      allow update: if isStaffOrAdmin();
+
+      // Only admins can delete quotes
+      allow delete: if isAdmin();
+    }
+
+    // Enquiries collection
+    match /enquiries/{enquiryId} {
+      // Users can create enquiries
+      allow create: if isAuthenticated();
+
+      // Users can read their own enquiries
+      allow read: if isAuthenticated() && resource.data.email == request.auth.token.email;
+
+      // Staff and admins can read all enquiries
+      allow read: if isStaffOrAdmin();
+
+      // Staff and admins can update enquiries
+      allow update: if isStaffOrAdmin();
+
+      // Only admins can delete enquiries
+      allow delete: if isAdmin();
+    }
+
+    // Analytics collection (if needed)
+    match /analytics/{document=**} {
+      // Only admins can read analytics
+      allow read: if isAdmin();
+
+      // Only server functions can write analytics
+      allow write: if false;
+    }
+  }
+}
