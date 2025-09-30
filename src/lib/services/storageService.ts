@@ -8,6 +8,7 @@ import {
 } from 'firebase/storage'
 import { storage } from '../firebase'
 import { ImageService } from './imageService'
+import { uploadQueue } from './uploadQueue'
 
 export class StorageService {
   // Upload single file
@@ -35,6 +36,35 @@ export class StorageService {
       return await Promise.all(uploadPromises)
     } catch (error) {
       console.error('Error uploading multiple files:', error)
+      throw error
+    }
+  }
+
+  // Upload quote attachments with queued database records (optimized for quota)
+  static async uploadQuoteAttachments(files: File[], quoteId: string, uploadedBy: string): Promise<string[]> {
+    try {
+      const basePath = `quotes/${quoteId}/attachments`
+      const urls = await this.uploadMultipleFiles(files, basePath)
+
+      // Queue database records instead of creating them immediately
+      for (let i = 0; i < files.length; i++) {
+        uploadQueue.queueImageRecord({
+          fileName: files[i].name,
+          originalName: files[i].name,
+          url: urls[i],
+          size: files[i].size,
+          mimeType: files[i].type,
+          uploadedBy,
+          category: 'quote',
+          referenceId: quoteId,
+          isActive: true
+        })
+      }
+
+      console.log(`Queued ${files.length} image records for processing`)
+      return urls
+    } catch (error) {
+      console.error('Error uploading quote attachments:', error)
       throw error
     }
   }

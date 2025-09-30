@@ -34,8 +34,30 @@ export class QuoteService {
       }
       const docRef = await addDoc(collection(db, COLLECTION_NAME), newQuote)
       return docRef.id
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating quote:', error)
+      
+      // Handle quota exceeded error specifically
+      if (error?.code === 'resource-exhausted') {
+        // Save quote data locally as fallback
+        const localQuoteId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        const localQuote = {
+          id: localQuoteId,
+          ...quoteData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isLocalOnly: true
+        }
+        
+        // Store in localStorage for later sync
+        const existingLocalQuotes = JSON.parse(localStorage.getItem('pendingQuotes') || '[]')
+        existingLocalQuotes.push(localQuote)
+        localStorage.setItem('pendingQuotes', JSON.stringify(existingLocalQuotes))
+        
+        console.log('Quote saved locally due to quota limit:', localQuoteId)
+        throw new Error(`Firebase quota exceeded. Your quote has been saved locally (ID: ${localQuoteId}) and will be synced when quota resets. Please contact support if this persists.`)
+      }
+      
       throw error
     }
   }
@@ -249,6 +271,24 @@ export class QuoteService {
     }
   }
 
+  // Get all quotes
+  static async getAllQuotes(): Promise<QuoteRequest[]> {
+    try {
+      const q = query(
+        collection(db, COLLECTION_NAME),
+        orderBy('createdAt', 'desc')
+      )
+      const querySnapshot = await getDocs(q)
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as QuoteRequest))
+    } catch (error) {
+      console.error('Error fetching all quotes:', error)
+      throw error
+    }
+  }
+
   // Get recent quotes
   static async getRecentQuotes(limitCount: number = 10): Promise<QuoteRequest[]> {
     try {
@@ -453,6 +493,57 @@ export class QuoteService {
     return {
       isValid: errors.length === 0,
       errors
+    }
+  }
+
+  // Sync pending local quotes to Firestore when quota is available
+  static async syncPendingQuotes(): Promise<{ synced: number; failed: number }> {
+    try {
+      const pendingQuotes = JSON.parse(localStorage.getItem('pendingQuotes') || '[]')
+      if (pendingQuotes.length === 0) {
+        return { synced: 0, failed: 0 }
+      }
+
+      let synced = 0
+      let failed = 0
+      const remainingQuotes = []
+
+      for (const localQuote of pendingQuotes) {
+        try {
+          // Remove local-only fields
+          const { id, isLocalOnly, ...quoteData } = localQuote
+          
+          // Try to create in Firestore
+          const newQuoteId = await this.createQuote(quoteData)
+          console.log(`Synced local quote ${id} to Firestore as ${newQuoteId}`)
+          synced++
+        } catch (error: any) {
+          console.error(`Failed to sync quote ${localQuote.id}:`, error)
+          if (error?.code === 'resource-exhausted') {
+            // Still quota issues, keep in local storage
+            remainingQuotes.push(localQuote)
+          }
+          failed++
+        }
+      }
+
+      // Update localStorage with remaining quotes
+      localStorage.setItem('pendingQuotes', JSON.stringify(remainingQuotes))
+      
+      return { synced, failed }
+    } catch (error) {
+      console.error('Error syncing pending quotes:', error)
+      return { synced: 0, failed: 0 }
+    }
+  }
+
+  // Get pending local quotes count
+  static getPendingQuotesCount(): number {
+    try {
+      const pendingQuotes = JSON.parse(localStorage.getItem('pendingQuotes') || '[]')
+      return pendingQuotes.length
+    } catch {
+      return 0
     }
   }
 }

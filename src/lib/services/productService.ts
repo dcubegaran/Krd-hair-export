@@ -24,16 +24,23 @@ export class ProductService {
   // Get all active products
   static async getAllProducts(): Promise<Product[]> {
     try {
+      // Simplified query without orderBy to avoid index requirement
       const q = query(
         collection(db, COLLECTION_NAME),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc')
+        where('isActive', '==', true)
       )
       const querySnapshot = await getDocs(q)
-      return querySnapshot.docs.map(doc => ({
+      const products = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Product))
+      
+      // Sort in memory by createdAt (newest first)
+      return products.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(0)
+        const bTime = b.createdAt?.toDate?.() || new Date(0)
+        return bTime.getTime() - aTime.getTime()
+      })
     } catch (error) {
       console.error('Error fetching products:', error)
       throw error
@@ -43,18 +50,26 @@ export class ProductService {
   // Get featured products
   static async getFeaturedProducts(): Promise<Product[]> {
     try {
+      // Simplified query without orderBy to avoid index requirement
       const q = query(
         collection(db, COLLECTION_NAME),
         where('isActive', '==', true),
-        where('isFeatured', '==', true),
-        orderBy('createdAt', 'desc'),
-        limit(8)
+        where('isFeatured', '==', true)
       )
       const querySnapshot = await getDocs(q)
-      return querySnapshot.docs.map(doc => ({
+      const products = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Product))
+      
+      // Sort in memory by createdAt (newest first) and limit to 8
+      return products
+        .sort((a, b) => {
+          const aTime = a.createdAt?.toDate?.() || new Date(0)
+          const bTime = b.createdAt?.toDate?.() || new Date(0)
+          return bTime.getTime() - aTime.getTime()
+        })
+        .slice(0, 8)
     } catch (error) {
       console.error('Error fetching featured products:', error)
       throw error
@@ -78,17 +93,24 @@ export class ProductService {
   // Get products by category
   static async getProductsByCategory(category: string): Promise<Product[]> {
     try {
+      // Simplified query without orderBy to avoid index requirement
       const q = query(
         collection(db, COLLECTION_NAME),
         where('category', '==', category),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc')
+        where('isActive', '==', true)
       )
       const querySnapshot = await getDocs(q)
-      return querySnapshot.docs.map(doc => ({
+      const products = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Product))
+      
+      // Sort in memory by createdAt (newest first)
+      return products.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(0)
+        const bTime = b.createdAt?.toDate?.() || new Date(0)
+        return bTime.getTime() - aTime.getTime()
+      })
     } catch (error) {
       console.error('Error fetching products by category:', error)
       throw error
@@ -98,10 +120,10 @@ export class ProductService {
   // Search products
   static async searchProducts(searchTerm: string): Promise<Product[]> {
     try {
+      // Simplified query without orderBy to avoid index requirement
       const q = query(
         collection(db, COLLECTION_NAME),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc')
+        where('isActive', '==', true)
       )
       const querySnapshot = await getDocs(q)
 
@@ -117,7 +139,12 @@ export class ProductService {
         product.sku.toLowerCase().includes(searchTerm.toLowerCase())
       )
 
-      return filteredProducts
+      // Sort filtered results by createdAt (newest first)
+      return filteredProducts.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(0)
+        const bTime = b.createdAt?.toDate?.() || new Date(0)
+        return bTime.getTime() - aTime.getTime()
+      })
     } catch (error) {
       console.error('Error searching products:', error)
       throw error
@@ -186,17 +213,20 @@ export class ProductService {
   // Get low stock products
   static async getLowStockProducts(threshold: number = 10): Promise<Product[]> {
     try {
+      // Simplified query without orderBy to avoid index requirement
       const q = query(
         collection(db, COLLECTION_NAME),
         where('stockQuantity', '<=', threshold),
-        where('isActive', '==', true),
-        orderBy('stockQuantity', 'asc')
+        where('isActive', '==', true)
       )
       const querySnapshot = await getDocs(q)
-      return querySnapshot.docs.map(doc => ({
+      const products = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Product))
+      
+      // Sort in memory by stockQuantity (lowest first)
+      return products.sort((a, b) => (a.stockQuantity || 0) - (b.stockQuantity || 0))
     } catch (error) {
       console.error('Error fetching low stock products:', error)
       throw error
@@ -206,16 +236,19 @@ export class ProductService {
   // Get all categories
   static async getAllCategories(): Promise<Category[]> {
     try {
+      // Simplified query without orderBy to avoid index requirement
       const q = query(
         collection(db, CATEGORIES_COLLECTION),
-        where('isActive', '==', true),
-        orderBy('sortOrder', 'asc')
+        where('isActive', '==', true)
       )
       const querySnapshot = await getDocs(q)
-      return querySnapshot.docs.map(doc => ({
+      const categories = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Category))
+      
+      // Sort in memory by sortOrder (ascending)
+      return categories.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
     } catch (error) {
       console.error('Error fetching categories:', error)
       throw error
@@ -229,31 +262,34 @@ export class ProductService {
     totalPages: number
   }> {
     try {
-      const offset = (page - 1) * pageSize
+      // Get all active products first
       const q = query(
-        collection(db, COLLECTION_NAME),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc'),
-        limit(pageSize)
-      )
-      const querySnapshot = await getDocs(q)
-
-      // Get total count
-      const totalQuery = query(
         collection(db, COLLECTION_NAME),
         where('isActive', '==', true)
       )
-      const totalSnapshot = await getDocs(totalQuery)
-      const total = totalSnapshot.size
-      const totalPages = Math.ceil(total / pageSize)
-
-      const products = querySnapshot.docs.map(doc => ({
+      const querySnapshot = await getDocs(q)
+      
+      const allProducts = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Product))
 
+      // Sort in memory by createdAt (newest first)
+      const sortedProducts = allProducts.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(0)
+        const bTime = b.createdAt?.toDate?.() || new Date(0)
+        return bTime.getTime() - aTime.getTime()
+      })
+
+      // Apply pagination in memory
+      const offset = (page - 1) * pageSize
+      const paginatedProducts = sortedProducts.slice(offset, offset + pageSize)
+      
+      const total = allProducts.length
+      const totalPages = Math.ceil(total / pageSize)
+
       return {
-        products,
+        products: paginatedProducts,
         total,
         totalPages
       }

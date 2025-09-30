@@ -1,182 +1,232 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Upload, X, Plus, Minus } from "lucide-react"
-import { ProductService } from "@/lib/services/productService"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Upload, X, Plus, Minus } from "lucide-react";
+import { ProductService } from "@/lib/services/productService";
 
 interface ProductFormData {
-  name: string
-  sku: string
-  description: string
-  category: string
-  subcategory: string
-  origin: string
-  hairType: string
-  texture: string
-  lengths: number[]
-  colors: string[]
-  pricePerBundle: number
-  bulkPricing: Array<{ minQuantity: number; pricePerUnit: number }>
-  stockQuantity: number
-  minOrderQuantity: number
-  images: string[]
-  isActive: boolean
-  isFeatured: boolean
+  name: string;
+  sku: string;
+  description: string;
+  category: string;
+  subcategory: string;
+  origin: string;
+  hairType: string;
+  texture: string;
+  lengths: number[];
+  colors: string[];
+  pricePerBundle: number;
+  bulkPricing: Array<{ minQuantity: number; pricePerUnit: number }>;
+  stockQuantity: number;
+  minOrderQuantity: number;
+  images: string[];
+  isActive: boolean;
+  isFeatured: boolean;
 }
 
 interface AddProductModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onProductAdded: (product: any) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onProductAdded: (product: any) => void;
 }
 
-export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductModalProps) {
+export function AddProductModal({
+  isOpen,
+  onClose,
+  onProductAdded,
+}: AddProductModalProps) {
   const [formData, setFormData] = useState<ProductFormData>({
-    name: '',
-    sku: '',
-    description: '',
-    category: '',
-    subcategory: '',
-    origin: '',
-    hairType: '',
-    texture: '',
+    name: "",
+    sku: "",
+    description: "",
+    category: "",
+    subcategory: "",
+    origin: "",
+    hairType: "",
+    texture: "",
     lengths: [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30],
-    colors: ['Natural Black', 'Dark Brown', 'Medium Brown', 'Light Brown', 'Blonde', 'Auburn', 'Red', 'Grey'],
+    colors: [
+      "Natural Black",
+      "Dark Brown",
+      "Medium Brown",
+      "Light Brown",
+      "Blonde",
+      "Auburn",
+      "Red",
+      "Grey",
+    ],
     pricePerBundle: 0,
     bulkPricing: [],
     stockQuantity: 0,
     minOrderQuantity: 1,
     images: [],
     isActive: true,
-    isFeatured: false
-  })
+    isFeatured: false,
+  });
 
-  const [loading, setLoading] = useState(false)
-  const [newLength, setNewLength] = useState('')
-  const [newColor, setNewColor] = useState('')
-  const [newBulkPrice, setNewBulkPrice] = useState({ minQuantity: 0, pricePerUnit: 0 })
+  const [loading, setLoading] = useState(false);
+  const [newLength, setNewLength] = useState("");
+  const [newColor, setNewColor] = useState("");
+  const [newBulkPrice, setNewBulkPrice] = useState({
+    minQuantity: 0,
+    pricePerUnit: 0,
+  });
 
   const handleInputChange = (field: keyof ProductFormData, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
-    }))
-  }
+      [field]: value,
+    }));
+  };
 
   const addLength = () => {
     if (newLength && !formData.lengths.includes(parseInt(newLength))) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        lengths: [...prev.lengths, parseInt(newLength)].sort((a, b) => a - b)
-      }))
-      setNewLength('')
+        lengths: [...prev.lengths, parseInt(newLength)].sort((a, b) => a - b),
+      }));
+      setNewLength("");
     }
-  }
+  };
 
   const removeLength = (length: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      lengths: prev.lengths.filter(l => l !== length)
-    }))
-  }
+      lengths: prev.lengths.filter((l) => l !== length),
+    }));
+  };
 
   const addColor = () => {
     if (newColor && !formData.colors.includes(newColor)) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        colors: [...prev.colors, newColor]
-      }))
-      setNewColor('')
+        colors: [...prev.colors, newColor],
+      }));
+      setNewColor("");
     }
-  }
+  };
 
   const removeColor = (color: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      colors: prev.colors.filter(c => c !== color)
-    }))
-  }
+      colors: prev.colors.filter((c) => c !== color),
+    }));
+  };
 
   const addBulkPrice = () => {
     if (newBulkPrice.minQuantity > 0 && newBulkPrice.pricePerUnit > 0) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        bulkPricing: [...prev.bulkPricing, newBulkPrice].sort((a, b) => a.minQuantity - b.minQuantity)
-      }))
-      setNewBulkPrice({ minQuantity: 0, pricePerUnit: 0 })
+        bulkPricing: [...prev.bulkPricing, newBulkPrice].sort(
+          (a, b) => a.minQuantity - b.minQuantity
+        ),
+      }));
+      setNewBulkPrice({ minQuantity: 0, pricePerUnit: 0 });
     }
-  }
+  };
 
   const removeBulkPrice = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      bulkPricing: prev.bulkPricing.filter((_, i) => i !== index)
-    }))
-  }
+      bulkPricing: prev.bulkPricing.filter((_, i) => i !== index),
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      // Generate a unique ID for the product
-      const productId = `prod_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      console.log("🔄 Creating product with data:", formData);
 
-      const newProduct = {
-        id: productId,
-        ...formData,
-        createdAt: new Date(),
-        updatedAt: new Date()
+      // Create product using Firebase service (returns product ID)
+      const productId = await ProductService.createProduct(formData);
+      console.log("✅ Product created with ID:", productId);
+
+      // Fetch the complete product object
+      const newProduct = await ProductService.getProductById(productId);
+      console.log("📦 Fetched complete product:", newProduct);
+
+      if (newProduct) {
+        // Call the callback with the complete product object
+        onProductAdded(newProduct);
+      } else {
+        throw new Error("Failed to fetch created product");
       }
-
-      // In a real app, this would save to the database
-      // For now, we'll just call the callback with the new product
-      onProductAdded(newProduct)
 
       // Reset form
       setFormData({
-        name: '',
-        sku: '',
-        description: '',
-        category: '',
-        subcategory: '',
-        origin: '',
-        hairType: '',
-        texture: '',
+        name: "",
+        sku: "",
+        description: "",
+        category: "",
+        subcategory: "",
+        origin: "",
+        hairType: "",
+        texture: "",
         lengths: [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30],
-        colors: ['Natural Black', 'Dark Brown', 'Medium Brown', 'Light Brown', 'Blonde', 'Auburn', 'Red', 'Grey'],
+        colors: [
+          "Natural Black",
+          "Dark Brown",
+          "Medium Brown",
+          "Light Brown",
+          "Blonde",
+          "Auburn",
+          "Red",
+          "Grey",
+        ],
         pricePerBundle: 0,
         bulkPricing: [],
         stockQuantity: 0,
         minOrderQuantity: 1,
         images: [],
         isActive: true,
-        isFeatured: false
-      })
+        isFeatured: false,
+      });
 
-      onClose()
+      onClose();
     } catch (error) {
-      console.error('Error adding product:', error)
-      alert('Error adding product. Please try again.')
+      console.error("Error adding product:", error);
+      alert("Error adding product. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Add New Product</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">
+            Add New Product
+          </DialogTitle>
           <DialogDescription>
             Create a new hair product for your inventory
           </DialogDescription>
@@ -187,7 +237,9 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
-              <CardDescription>Product name, SKU, and description</CardDescription>
+              <CardDescription>
+                Product name, SKU, and description
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -196,7 +248,7 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
                     required
                     placeholder="e.g., Brazilian Straight Hair"
                   />
@@ -206,7 +258,7 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                   <Input
                     id="sku"
                     value={formData.sku}
-                    onChange={(e) => handleInputChange('sku', e.target.value)}
+                    onChange={(e) => handleInputChange("sku", e.target.value)}
                     required
                     placeholder="e.g., BS-001"
                   />
@@ -218,7 +270,9 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("description", e.target.value)
+                  }
                   required
                   placeholder="Detailed description of the product..."
                   rows={3}
@@ -228,7 +282,12 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) =>
+                      handleInputChange("category", value)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -245,7 +304,12 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="origin">Origin *</Label>
-                  <Select value={formData.origin} onValueChange={(value) => handleInputChange('origin', value)}>
+                  <Select
+                    value={formData.origin}
+                    onValueChange={(value) =>
+                      handleInputChange("origin", value)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select origin" />
                     </SelectTrigger>
@@ -261,7 +325,12 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="hairType">Hair Type *</Label>
-                  <Select value={formData.hairType} onValueChange={(value) => handleInputChange('hairType', value)}>
+                  <Select
+                    value={formData.hairType}
+                    onValueChange={(value) =>
+                      handleInputChange("hairType", value)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select hair type" />
                     </SelectTrigger>
@@ -280,7 +349,7 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                 <Input
                   id="texture"
                   value={formData.texture}
-                  onChange={(e) => handleInputChange('texture', e.target.value)}
+                  onChange={(e) => handleInputChange("texture", e.target.value)}
                   required
                   placeholder="e.g., Straight, Body Wave, Deep Wave"
                 />
@@ -292,7 +361,9 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
           <Card>
             <CardHeader>
               <CardTitle>Pricing & Inventory</CardTitle>
-              <CardDescription>Set pricing and stock information</CardDescription>
+              <CardDescription>
+                Set pricing and stock information
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -304,7 +375,12 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                     step="0.01"
                     min="0"
                     value={formData.pricePerBundle}
-                    onChange={(e) => handleInputChange('pricePerBundle', parseFloat(e.target.value))}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "pricePerBundle",
+                        parseFloat(e.target.value)
+                      )
+                    }
                     required
                     placeholder="0.00"
                   />
@@ -316,19 +392,31 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                     type="number"
                     min="0"
                     value={formData.stockQuantity}
-                    onChange={(e) => handleInputChange('stockQuantity', parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "stockQuantity",
+                        parseInt(e.target.value)
+                      )
+                    }
                     required
                     placeholder="0"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="minOrderQuantity">Minimum Order Quantity</Label>
+                  <Label htmlFor="minOrderQuantity">
+                    Minimum Order Quantity
+                  </Label>
                   <Input
                     id="minOrderQuantity"
                     type="number"
                     min="1"
                     value={formData.minOrderQuantity}
-                    onChange={(e) => handleInputChange('minOrderQuantity', parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "minOrderQuantity",
+                        parseInt(e.target.value)
+                      )
+                    }
                     placeholder="1"
                   />
                 </div>
@@ -343,7 +431,12 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                     min="1"
                     placeholder="Min quantity"
                     value={newBulkPrice.minQuantity}
-                    onChange={(e) => setNewBulkPrice(prev => ({ ...prev, minQuantity: parseInt(e.target.value) }))}
+                    onChange={(e) =>
+                      setNewBulkPrice((prev) => ({
+                        ...prev,
+                        minQuantity: parseInt(e.target.value),
+                      }))
+                    }
                   />
                   <Input
                     type="number"
@@ -351,7 +444,12 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                     min="0"
                     placeholder="Price per unit"
                     value={newBulkPrice.pricePerUnit}
-                    onChange={(e) => setNewBulkPrice(prev => ({ ...prev, pricePerUnit: parseFloat(e.target.value) }))}
+                    onChange={(e) =>
+                      setNewBulkPrice((prev) => ({
+                        ...prev,
+                        pricePerUnit: parseFloat(e.target.value),
+                      }))
+                    }
                   />
                   <Button type="button" onClick={addBulkPrice}>
                     <Plus className="h-4 w-4" />
@@ -360,9 +458,20 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                 {formData.bulkPricing.length > 0 && (
                   <div className="space-y-2">
                     {formData.bulkPricing.map((pricing, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                        <span>{pricing.minQuantity}+ bundles: ${pricing.pricePerUnit} each</span>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => removeBulkPrice(index)}>
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-muted rounded"
+                      >
+                        <span>
+                          {pricing.minQuantity}+ bundles: $
+                          {pricing.pricePerUnit} each
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeBulkPrice(index)}
+                        >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
@@ -385,7 +494,11 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                 <Label>Available Lengths (inches)</Label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {formData.lengths.map((length) => (
-                    <Badge key={length} variant="secondary" className="flex items-center gap-1">
+                    <Badge
+                      key={length}
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
                       {length}"
                       <Button
                         type="button"
@@ -419,7 +532,11 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                 <Label>Available Colors</Label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {formData.colors.map((color) => (
-                    <Badge key={color} variant="outline" className="flex items-center gap-1">
+                    <Badge
+                      key={color}
+                      variant="outline"
+                      className="flex items-center gap-1"
+                    >
                       {color}
                       <Button
                         type="button"
@@ -459,7 +576,9 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                   type="checkbox"
                   id="isActive"
                   checked={formData.isActive}
-                  onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                  onChange={(e) =>
+                    handleInputChange("isActive", e.target.checked)
+                  }
                   className="rounded"
                 />
                 <Label htmlFor="isActive">Active (visible to customers)</Label>
@@ -469,7 +588,9 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
                   type="checkbox"
                   id="isFeatured"
                   checked={formData.isFeatured}
-                  onChange={(e) => handleInputChange('isFeatured', e.target.checked)}
+                  onChange={(e) =>
+                    handleInputChange("isFeatured", e.target.checked)
+                  }
                   className="rounded"
                 />
                 <Label htmlFor="isFeatured">Featured product</Label>
@@ -489,5 +610,5 @@ export function AddProductModal({ isOpen, onClose, onProductAdded }: AddProductM
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
